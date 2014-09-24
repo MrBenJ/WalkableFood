@@ -16,8 +16,6 @@ import com.google.android.gms.maps.model.LatLng;
 import com.google.android.gms.maps.model.Marker;
 import com.google.android.gms.maps.model.MarkerOptions;
 
-import org.json.JSONObject;
-
 public class MapsActivity extends FragmentActivity {
 
 
@@ -27,8 +25,8 @@ public class MapsActivity extends FragmentActivity {
     //Location Variables
     private LocationManager mLocationManager;
     private LocationListener mLocationListener;
-    private double lat;
-    private double lng;
+    public static double lat;
+    public static double lng;
     private LatLng currentLocation = new LatLng(0,0);
 
 
@@ -144,6 +142,8 @@ public class MapsActivity extends FragmentActivity {
             public void onMarkerDragEnd(Marker marker) {
                 //TODO: Search Google Places
                 Log.i(TAG, "Marker has been set!!!");
+                GetNearbyPlacesTask getNearbyPlacesTask = new GetNearbyPlacesTask();
+                getNearbyPlacesTask.execute();
 
 
             }
@@ -152,6 +152,8 @@ public class MapsActivity extends FragmentActivity {
         });
 
     }
+
+
 
 
 
