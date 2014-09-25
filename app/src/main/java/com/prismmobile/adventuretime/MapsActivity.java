@@ -1,5 +1,6 @@
 package com.prismmobile.adventuretime;
 
+import android.app.AlertDialog;
 import android.content.Context;
 import android.location.Location;
 import android.location.LocationManager;
@@ -11,18 +12,17 @@ import android.view.Window;
 import com.google.android.gms.maps.CameraUpdateFactory;
 import com.google.android.gms.maps.GoogleMap;
 import com.google.android.gms.maps.SupportMapFragment;
-import com.google.android.gms.maps.model.BitmapDescriptorFactory;
 import com.google.android.gms.maps.model.LatLng;
 import com.google.android.gms.maps.model.Marker;
 import com.google.android.gms.maps.model.MarkerOptions;
 
-public class MapsActivity extends FragmentActivity implements GetNearbyPlacesTask.OnTaskCompleted {
+public class MapsActivity extends FragmentActivity  implements GetNearbyPlacesTask.OnTaskCompleted {
 
 
-    // Debug Objects
+    // Standard
     private final static String TAG = MapsActivity.class.getSimpleName();
 
-    //Location Variables
+    //Location Variables, to be used multiple times
     public static double lat;
     public static double lng;
 
@@ -55,9 +55,6 @@ public class MapsActivity extends FragmentActivity implements GetNearbyPlacesTas
     protected void onPause() {
         super.onPause();
 
-        // Stop listening for Location Updates to save battery
-        Log.i(TAG, "Pausing Location Updates");
-    //    mLocationManager.removeUpdates(mLocationListener);
     }
 
 
@@ -90,8 +87,11 @@ public class MapsActivity extends FragmentActivity implements GetNearbyPlacesTas
 
     private void setupInitialLocation() {
 
+        //Get and set the user's location. Using cached location to not deal with listener updates
+        //and change around sensors
         LocationManager mLocationManager = (LocationManager) this.getSystemService(Context.LOCATION_SERVICE);
         Location myLocation = mLocationManager.getLastKnownLocation(LocationManager.NETWORK_PROVIDER);
+
         lat = myLocation.getLatitude();
         lng = myLocation.getLongitude();
         LatLng currentLocation = new LatLng(lat,lng);
@@ -99,37 +99,32 @@ public class MapsActivity extends FragmentActivity implements GetNearbyPlacesTas
         Log.i(TAG, "LOCATION IS LAT: " + lat + " LNG: " +lng);
 
         AddSearchMarker();
+
+        // Starts an initial search from the user's current location.
         GetNearbyPlacesTask initialSearch = new GetNearbyPlacesTask();
-        initialSearch.asyncListener = MapsActivity.this;
+        initialSearch.asyncListener = MapsActivity.this; // for onComplete interface
         initialSearch.execute();
 
         mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(currentLocation, 14));
         mMap.setOnMarkerDragListener(new GoogleMap.OnMarkerDragListener() {
             @Override
-            public void onMarkerDragStart(Marker marker) {
-            }
-
+            public void onMarkerDragStart(Marker marker) {}
             @Override
-            public void onMarkerDrag(Marker marker) {
-            }
+            public void onMarkerDrag(Marker marker) {}
 
             @Override
             public void onMarkerDragEnd(Marker marker) {
-                //TODO: Search Google Places
-                Log.i(TAG, "Marker has been set!!!");
+                Log.i(TAG, "Marker Set!");
 
                 // Gets the position of the Search Marker
                 LatLng searchMarker = marker.getPosition();
                 lat = searchMarker.latitude;
                 lng = searchMarker.longitude;
-                Log.i(TAG, "LOCATION: LAT: " + lat + "LNG: " + lng);
+                Log.i(TAG, "MARKER LOCATION: LAT: " + lat + "LNG: " + lng);
 
                 GetNearbyPlacesTask getNearbyPlacesTask = new GetNearbyPlacesTask();
                 getNearbyPlacesTask.asyncListener = MapsActivity.this; // For OnTaskComplete interface
                 getNearbyPlacesTask.execute();
-
-
-
 
                 // Puts a loading bar on the top during Async task, so User knows
                 // that a search is being conducted
@@ -140,19 +135,31 @@ public class MapsActivity extends FragmentActivity implements GetNearbyPlacesTas
     }
 
     public static void AddSearchMarker() {
+
+        // Adds the search marker
         mMap.addMarker(new MarkerOptions()
                 .draggable(true)
                 .position(new LatLng(lat, lng))
-                .title("Search Here")
-                .snippet("Drag me to search"));
+                .title("Search 1/2 mile radius from here")
+                .snippet("Hold and Drag me to search"));
     }
 
-    // Called when the GetNearbyPlacesTask is done
+    // Called when the GetNearbyPlacesTask is done, as it immediately clears all old markers,
+    // including the search marker
 
-    public void onTaskComplete() {
+    public void onTaskComplete(boolean connectionSuccessful) {
 
-        //Get rid of the progress bar!
+        if (!connectionSuccessful) {
+            AlertDialog.Builder builder = new AlertDialog.Builder(this);
+            builder.setMessage(getString(R.string.No_internet))
+                    .setTitle(getString(R.string.uh_oh))
+                    .setPositiveButton(getString(R.string.OK), null)
+                    .create()
+                    .show();
+        }
+        // Get rid of the progress bar, regardless if a connection was made
         setProgressBarIndeterminateVisibility(false);
+
     }
 
 

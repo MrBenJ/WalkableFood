@@ -25,7 +25,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * This AsyncTask gets the places whenever someone drops the marker
+ * This AsyncTask gets the places whenever someone drops the marker.
  *
  * Created by benjunya on 9/23/14.
  */
@@ -34,6 +34,7 @@ public class GetNearbyPlacesTask extends AsyncTask<Object, Void, JSONObject> {
     private final static String TAG = GetNearbyPlacesTask.class.getSimpleName();
     private List<Places> places = new ArrayList<Places>();
     public OnTaskCompleted asyncListener = null;
+    static boolean connectionSuccessful;
 
 
     /**
@@ -41,13 +42,13 @@ public class GetNearbyPlacesTask extends AsyncTask<Object, Void, JSONObject> {
      is finished.
      */
     public interface OnTaskCompleted {
-        void onTaskComplete();
+        void onTaskComplete(boolean connectionSuccessful);
     }
 
 
     @Override
     protected JSONObject doInBackground(Object... arg0) {
-        int responseCode = -1;
+
         JSONObject jsonResponse = null; // For semantics
 
         try {
@@ -57,13 +58,15 @@ public class GetNearbyPlacesTask extends AsyncTask<Object, Void, JSONObject> {
                     "&types=food" +
                     "&key=AIzaSyBj3t25nFQsarl-_ek6pNd8RlbZnHDVrr8");
 
-            //ANDROID KEY: not working!?? AIzaSyC-qCn2RPUtMSt5v3horE0SOzsbyKzTmi8
-            // WEB KEY: AIzaSyBj3t25nFQsarl-_ek6pNd8RlbZnHDVrr8
-
+            // Talk to Google Places - find places nearby
             HttpURLConnection connection = (HttpURLConnection) placeSearch.openConnection();
             connection.connect();
 
-            responseCode = connection.getResponseCode();
+
+            int responseCode = connection.getResponseCode();
+
+            // Check to make sure a connection is properly established. Otherwise,
+            // report bad connection and show display error dialog
             if (responseCode == HttpURLConnection.HTTP_OK) {
                 InputStream inputStream = connection.getInputStream();
                 Reader reader = new InputStreamReader(inputStream);
@@ -73,6 +76,7 @@ public class GetNearbyPlacesTask extends AsyncTask<Object, Void, JSONObject> {
                 gson.fromJson(element, Places.class);
 
                 if (element.isJsonObject()) {
+                    connectionSuccessful = true;
                     JsonObject placeResults = element.getAsJsonObject();
                     JsonArray results = placeResults.getAsJsonArray("results");
                     for (int i = 0; i < results.size(); i++) {
@@ -90,7 +94,7 @@ public class GetNearbyPlacesTask extends AsyncTask<Object, Void, JSONObject> {
                         JsonObject location = locationElement.getAsJsonObject();
 
                         // For Readability and clarity, defining variables and inputting
-                        // into map
+                        // into mMap.
                         double latPos = location.get("lat").getAsDouble();
                         double lngPos = location.get("lng").getAsDouble();
                         LatLng coordinates = new LatLng(latPos,lngPos);
@@ -102,42 +106,23 @@ public class GetNearbyPlacesTask extends AsyncTask<Object, Void, JSONObject> {
 
                         places.add(i, thisPlace);
 
-
-
-
-
                         }
 
                     }
 
-
-            //    Places myObj = gson.fromJson(reader, Places.class);
-
-            //    Log.v(TAG, "RESPONSE DATA:" + responseData);
-                Log.v(TAG, "URL: " + placeSearch.toString());
-                /*
-                jsonResponse = new JSONObject(responseData);
-                String status = jsonResponse.getString("status");
-                Log.v(TAG, status);
-
-                JSONArray places = jsonResponse.getJSONArray("posts");
-                */
                 }
-
 
             else {
                 Log.i(TAG, "Unsuccessful HTTP Response Code: " + responseCode);
+                connectionSuccessful = false;
             }
         } catch (MalformedURLException e) {
             Log.i(TAG, "Exception caught:" + e.getMessage());
         } catch (IOException e) {
             Log.i(TAG, "Exception caught:" + e.getMessage());
-        } /*catch (JSONException e) {
-            Log.i(TAG, "Exception caught:" + e.getMessage());
-        } */
+        }
 
-        return jsonResponse;
-
+    return jsonResponse;
 
     }
 
@@ -145,25 +130,31 @@ public class GetNearbyPlacesTask extends AsyncTask<Object, Void, JSONObject> {
     protected void onPostExecute(JSONObject jsonObject) {
         super.onPostExecute(jsonObject);
         Log.i(TAG, "onPostExecute Running");
-        MapsActivity.mMap.clear();
+
+        if (connectionSuccessful) {
+            MapsActivity.mMap.clear();
 
 
-        for (int i = 0; i < places.size(); i++) {
+            for (int i = 0; i < places.size(); i++) {
 
-            String name = places.get(i).getName();
-            String vicinity = places.get(i).getVicinity();
-            LatLng coordinates = places.get(i).getCoordinates();
+                String name = places.get(i).getName();
+                String vicinity = places.get(i).getVicinity();
+                LatLng coordinates = places.get(i).getCoordinates();
 
-            MapsActivity.mMap.addMarker(new MarkerOptions()
-                    .title(name)
-                    .snippet(vicinity)
-                    .position(coordinates)
-                    .icon(BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_BLUE)));
+                MapsActivity.mMap.addMarker(new MarkerOptions()
+                        .title(name)
+                        .snippet(vicinity)
+                        .position(coordinates)
+                        .icon(BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_BLUE)));
 
+            }
+            MapsActivity.AddSearchMarker();
+            asyncListener.onTaskComplete(connectionSuccessful);
         }
-        MapsActivity.AddSearchMarker();
-        asyncListener.onTaskComplete();
 
+        else {
+            asyncListener.onTaskComplete(false);
+        }
 
 
 

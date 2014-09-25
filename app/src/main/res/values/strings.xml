@@ -4,5 +4,8 @@
     <string name="app_name">AdventureTime</string>
     <string name="title_activity_maps">Map</string>
     <string name="walkable_food">Walkable Food</string>
+    <string name="uh_oh">Uh oh!</string>
+    <string name="No_internet">No internet connection. Please check your connection!</string>
+    <string name="OK">OK</string>
 
 </resources>
