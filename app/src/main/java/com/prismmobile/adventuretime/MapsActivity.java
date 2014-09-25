@@ -103,7 +103,7 @@ public class MapsActivity extends FragmentActivity implements GetNearbyPlacesTas
         initialSearch.asyncListener = MapsActivity.this;
         initialSearch.execute();
 
-        mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(currentLocation, 16));
+        mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(currentLocation, 14));
         mMap.setOnMarkerDragListener(new GoogleMap.OnMarkerDragListener() {
             @Override
             public void onMarkerDragStart(Marker marker) {
