@@ -4,10 +4,10 @@ import android.content.Context;
 import android.location.Location;
 import android.location.LocationListener;
 import android.location.LocationManager;
-import android.os.AsyncTask;
 import android.support.v4.app.FragmentActivity;
 import android.os.Bundle;
 import android.util.Log;
+import android.view.Window;
 
 import com.google.android.gms.maps.CameraUpdateFactory;
 import com.google.android.gms.maps.GoogleMap;
@@ -30,11 +30,12 @@ public class MapsActivity extends FragmentActivity {
     private LatLng currentLocation = new LatLng(0,0);
 
 
-    private GoogleMap mMap; // Might be null if Google Play services APK is not available.
+    public static GoogleMap mMap; // Might be null if Google Play services APK is not available.
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        requestWindowFeature(Window.FEATURE_INDETERMINATE_PROGRESS);
         setContentView(R.layout.activity_maps);
         setUpMapIfNeeded();
 
@@ -46,7 +47,7 @@ public class MapsActivity extends FragmentActivity {
         super.onResume();
         setUpMapIfNeeded();
         Log.i(TAG, "Listening for Location!");
-        setupInitialLocation();
+
     }
 
     @Override
@@ -55,7 +56,7 @@ public class MapsActivity extends FragmentActivity {
 
         // Stop listening for Location Updates to save battery
         Log.i(TAG, "Pausing Location Updates");
-        mLocationManager.removeUpdates(mLocationListener);
+    //    mLocationManager.removeUpdates(mLocationListener);
     }
 
 
@@ -121,7 +122,10 @@ public class MapsActivity extends FragmentActivity {
         lng = myLocation.getLongitude();
         currentLocation = new LatLng(lat,lng);
 
+        Log.i(TAG, "LOCATION IS LAT: " + lat + " LNG: " +lng);
+
         mMap.addMarker(new MarkerOptions()
+
                 .draggable(true)
                 .position(currentLocation)
                 .title("Search Here")
@@ -142,8 +146,18 @@ public class MapsActivity extends FragmentActivity {
             public void onMarkerDragEnd(Marker marker) {
                 //TODO: Search Google Places
                 Log.i(TAG, "Marker has been set!!!");
+
+                // Gets the position of the Search Marker
+                LatLng searchMarker = marker.getPosition();
+                lat = searchMarker.latitude;
+                lng = searchMarker.longitude;
+                Log.i(TAG, "LOCATION: LAT: " + lat + "LNG: " + lng);
                 GetNearbyPlacesTask getNearbyPlacesTask = new GetNearbyPlacesTask();
                 getNearbyPlacesTask.execute();
+
+                // Puts a loading bar on the top before Async task, so User knows
+                // that a search is being conducted
+                setProgressBarIndeterminateVisibility(true);
 
 
             }
