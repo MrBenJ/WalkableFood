@@ -3,5 +3,6 @@
 
     <string name="app_name">AdventureTime</string>
     <string name="title_activity_maps">Map</string>
+    <string name="walkable_food">Walkable Food</string>
 
 </resources>

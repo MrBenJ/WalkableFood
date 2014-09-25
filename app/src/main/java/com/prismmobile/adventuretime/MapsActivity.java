@@ -2,7 +2,6 @@ package com.prismmobile.adventuretime;
 
 import android.content.Context;
 import android.location.Location;
-import android.location.LocationListener;
 import android.location.LocationManager;
 import android.support.v4.app.FragmentActivity;
 import android.os.Bundle;
@@ -12,22 +11,23 @@ import android.view.Window;
 import com.google.android.gms.maps.CameraUpdateFactory;
 import com.google.android.gms.maps.GoogleMap;
 import com.google.android.gms.maps.SupportMapFragment;
+import com.google.android.gms.maps.model.BitmapDescriptorFactory;
 import com.google.android.gms.maps.model.LatLng;
 import com.google.android.gms.maps.model.Marker;
 import com.google.android.gms.maps.model.MarkerOptions;
 
-public class MapsActivity extends FragmentActivity {
+public class MapsActivity extends FragmentActivity implements GetNearbyPlacesTask.OnTaskCompleted {
 
 
     // Debug Objects
     private final static String TAG = MapsActivity.class.getSimpleName();
 
     //Location Variables
-    private LocationManager mLocationManager;
-    private LocationListener mLocationListener;
     public static double lat;
     public static double lng;
-    private LatLng currentLocation = new LatLng(0,0);
+
+
+
 
 
     public static GoogleMap mMap; // Might be null if Google Play services APK is not available.
@@ -37,6 +37,7 @@ public class MapsActivity extends FragmentActivity {
         super.onCreate(savedInstanceState);
         requestWindowFeature(Window.FEATURE_INDETERMINATE_PROGRESS);
         setContentView(R.layout.activity_maps);
+
         setUpMapIfNeeded();
 
 
@@ -87,50 +88,20 @@ public class MapsActivity extends FragmentActivity {
 
 
 
-    private void ListenForCurrentLocation() {
-
-
-        mLocationListener = new LocationListener() {
-            public void onLocationChanged(Location location) {
-                lat = location.getLatitude();
-                lng = location.getLongitude();
-
-                Log.d(TAG, "LOCATION LAT: " + lat + " LNG: " + lng);
-                currentLocation = new LatLng (lat,lng);
-            }
-
-            // Unrequired Methods
-            public void onStatusChanged(String provider, int status, Bundle extras) {}
-            public void onProviderEnabled(String provider) {}
-            public void onProviderDisabled(String provider) {}
-
-        };
-
-     //  mLocationManager.requestLocationUpdates(LocationManager.NETWORK_PROVIDER, 0, 0, mLocationListener);
-
-
-
-
-
-    }
-
     private void setupInitialLocation() {
 
-        mLocationManager = (LocationManager) this.getSystemService(Context.LOCATION_SERVICE);
+        LocationManager mLocationManager = (LocationManager) this.getSystemService(Context.LOCATION_SERVICE);
         Location myLocation = mLocationManager.getLastKnownLocation(LocationManager.NETWORK_PROVIDER);
         lat = myLocation.getLatitude();
         lng = myLocation.getLongitude();
-        currentLocation = new LatLng(lat,lng);
+        LatLng currentLocation = new LatLng(lat,lng);
 
         Log.i(TAG, "LOCATION IS LAT: " + lat + " LNG: " +lng);
 
-        mMap.addMarker(new MarkerOptions()
-
-                .draggable(true)
-                .position(currentLocation)
-                .title("Search Here")
-                .snippet("Drag me to search"));
-
+        AddSearchMarker();
+        GetNearbyPlacesTask initialSearch = new GetNearbyPlacesTask();
+        initialSearch.asyncListener = MapsActivity.this;
+        initialSearch.execute();
 
         mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(currentLocation, 16));
         mMap.setOnMarkerDragListener(new GoogleMap.OnMarkerDragListener() {
@@ -152,20 +123,43 @@ public class MapsActivity extends FragmentActivity {
                 lat = searchMarker.latitude;
                 lng = searchMarker.longitude;
                 Log.i(TAG, "LOCATION: LAT: " + lat + "LNG: " + lng);
+
                 GetNearbyPlacesTask getNearbyPlacesTask = new GetNearbyPlacesTask();
+                getNearbyPlacesTask.asyncListener = MapsActivity.this; // For OnTaskComplete interface
                 getNearbyPlacesTask.execute();
 
-                // Puts a loading bar on the top before Async task, so User knows
+
+
+
+                // Puts a loading bar on the top during Async task, so User knows
                 // that a search is being conducted
                 setProgressBarIndeterminateVisibility(true);
 
-
             }
-
-
         });
-
     }
+
+    public static void AddSearchMarker() {
+        mMap.addMarker(new MarkerOptions()
+                .draggable(true)
+                .position(new LatLng(lat, lng))
+                .title("Search Here")
+                .snippet("Drag me to search"));
+    }
+
+    // Called when the GetNearbyPlacesTask is done
+
+    public void onTaskComplete() {
+
+        //Get rid of the progress bar!
+        setProgressBarIndeterminateVisibility(false);
+    }
+
+
+
+
+
+
 
 
 

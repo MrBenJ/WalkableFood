@@ -1,7 +1,6 @@
 package com.prismmobile.adventuretime;
 
 import android.os.AsyncTask;
-import android.util.JsonReader;
 import android.util.Log;
 
 import com.google.android.gms.maps.model.BitmapDescriptorFactory;
@@ -13,7 +12,6 @@ import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 
-import org.json.JSONArray;
 import org.json.JSONObject;
 
 import java.io.IOException;
@@ -23,6 +21,8 @@ import java.io.Reader;
 import java.net.HttpURLConnection;
 import java.net.MalformedURLException;
 import java.net.URL;
+import java.util.ArrayList;
+import java.util.List;
 
 /**
  * This AsyncTask gets the places whenever someone drops the marker
@@ -32,13 +32,23 @@ import java.net.URL;
 public class GetNearbyPlacesTask extends AsyncTask<Object, Void, JSONObject> {
 
     private final static String TAG = GetNearbyPlacesTask.class.getSimpleName();
+    private List<Places> places = new ArrayList<Places>();
+    public OnTaskCompleted asyncListener = null;
 
+
+    /**
+    This interface is implemented in the Maps activity in order to listen for when the Async task
+     is finished.
+     */
+    public interface OnTaskCompleted {
+        void onTaskComplete();
+    }
 
 
     @Override
     protected JSONObject doInBackground(Object... arg0) {
         int responseCode = -1;
-        JSONObject jsonResponse = null;
+        JSONObject jsonResponse = null; // For semantics
 
         try {
             URL placeSearch = new URL("https://maps.googleapis.com/maps/api/place/nearbysearch/json?" +
@@ -57,7 +67,6 @@ public class GetNearbyPlacesTask extends AsyncTask<Object, Void, JSONObject> {
             if (responseCode == HttpURLConnection.HTTP_OK) {
                 InputStream inputStream = connection.getInputStream();
                 Reader reader = new InputStreamReader(inputStream);
-                JsonReader jsonReader = new JsonReader(reader);
                 Gson gson = new Gson();
                 JsonParser parser = new JsonParser();
                 JsonElement element = parser.parse(reader);
@@ -76,23 +85,26 @@ public class GetNearbyPlacesTask extends AsyncTask<Object, Void, JSONObject> {
                         // Go a few more levels down to get Lat/Lng
                         JsonElement geometryElement = place.get("geometry");
                         JsonObject geometry = geometryElement.getAsJsonObject();
+
                         JsonElement locationElement = geometry.get("location");
                         JsonObject location = locationElement.getAsJsonObject();
 
+                        // For Readability and clarity, defining variables and inputting
+                        // into map
                         double latPos = location.get("lat").getAsDouble();
                         double lngPos = location.get("lng").getAsDouble();
+                        LatLng coordinates = new LatLng(latPos,lngPos);
+
+                        Places thisPlace = new Places();
+                        thisPlace.setName(name);
+                        thisPlace.setVicinity(vicinity);
+                        thisPlace.setCoordinates(coordinates);
+
+                        places.add(i, thisPlace);
 
 
 
 
-
-                        /*
-                        MapsActivity.mMap.addMarker(new MarkerOptions()
-                        .title(name)
-                        .snippet(vicinity)
-                        .position(new LatLng(latPos,lngPos))
-                        .icon(BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_BLUE)));
-                        */
 
                         }
 
@@ -133,14 +145,37 @@ public class GetNearbyPlacesTask extends AsyncTask<Object, Void, JSONObject> {
     protected void onPostExecute(JSONObject jsonObject) {
         super.onPostExecute(jsonObject);
         Log.i(TAG, "onPostExecute Running");
+        MapsActivity.mMap.clear();
+
+
+        for (int i = 0; i < places.size(); i++) {
+
+            String name = places.get(i).getName();
+            String vicinity = places.get(i).getVicinity();
+            LatLng coordinates = places.get(i).getCoordinates();
+
+            MapsActivity.mMap.addMarker(new MarkerOptions()
+                    .title(name)
+                    .snippet(vicinity)
+                    .position(coordinates)
+                    .icon(BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_BLUE)));
+
+        }
+        MapsActivity.AddSearchMarker();
+        asyncListener.onTaskComplete();
+
+
+
+
+
+
+
     }
 
 
 
 
-    /** SETTERS AND GETTERS
-     *
-     */
+
 
 
 
